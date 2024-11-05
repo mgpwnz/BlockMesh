@@ -2,6 +2,7 @@
 
 # Default variables
 function="install"
+version=""
 
 # Options
 option_value(){ echo "$1" | sed -e 's%^--[^=]*=%%g; s%^-[^=]*=%%g'; }
@@ -15,6 +16,10 @@ while test $# -gt 0; do
         -up|--update)
             function="update"
             shift
+            if [[ "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                version="$1"
+                shift
+            fi
             ;;
         -un|--uninstall)
             function="uninstall"
@@ -118,10 +123,16 @@ EOF
 
 update() {
     sudo apt update && sudo apt upgrade -y
-    
+
     if [ -d "$HOME/blockmesh" ]; then
         echo "Directory $HOME/blockmesh exists. Checking for updates..."
-        blockmesh_version=$(wget -qO- https://api.github.com/repos/block-mesh/block-mesh-monorepo/releases/latest | jq -r ".tag_name")
+        if [ -z "$version" ]; then
+            # Get the latest version if not specified
+            blockmesh_version=$(wget -qO- https://api.github.com/repos/block-mesh/block-mesh-monorepo/releases/latest | jq -r ".tag_name")
+        else
+            blockmesh_version="$version"
+        fi
+
         wget -qO "$HOME/blockmesh.tar.gz" "https://github.com/block-mesh/block-mesh-monorepo/releases/download/${blockmesh_version}/blockmesh-cli-x86_64-unknown-linux-gnu.tar.gz"
         
         if [ "$(wc -c < "$HOME/blockmesh.tar.gz")" -ge 1000 ]; then
