@@ -2,6 +2,7 @@
 
 # Default variables
 function="install"
+version=""
 
 # Options
 option_value(){ echo "$1" | sed -e 's%^--[^=]*=%%g; s%^-[^=]*=%%g'; }
@@ -18,6 +19,10 @@ while test $# -gt 0; do
             ;;
         -un|--uninstall)
             function="uninstall"
+            shift
+            ;;
+        -v|--version)
+            version=$(option_value "$1")
             shift
             ;;
         *|--)
@@ -76,8 +81,13 @@ install() {
         done
 
         echo "All data is confirmed. Proceeding..."
-        blockmesh_version=$(wget -qO- https://api.github.com/repos/block-mesh/block-mesh-monorepo/releases/latest | jq -r ".tag_name")
-        wget -qO "$HOME/blockmesh.tar.gz" "https://github.com/block-mesh/block-mesh-monorepo/releases/download/${blockmesh_version}/blockmesh-cli-x86_64-unknown-linux-gnu.tar.gz"
+        
+        # Use specified version or fetch latest version
+        if [ -z "$version" ]; then
+            version=$(wget -qO- https://api.github.com/repos/block-mesh/block-mesh-monorepo/releases/latest | jq -r ".tag_name")
+        fi
+
+        wget -qO "$HOME/blockmesh.tar.gz" "https://github.com/block-mesh/block-mesh-monorepo/releases/download/${version}/blockmesh-cli-x86_64-unknown-linux-gnu.tar.gz"
         
         if [ "$(wc -c < "$HOME/blockmesh.tar.gz")" -ge 1000 ]; then
             tar -xvf "$HOME/blockmesh.tar.gz" -C "$HOME"
@@ -121,8 +131,13 @@ update() {
     
     if [ -d "$HOME/blockmesh" ]; then
         echo "Directory $HOME/blockmesh exists. Checking for updates..."
-        blockmesh_version=$(wget -qO- https://api.github.com/repos/block-mesh/block-mesh-monorepo/releases/latest | jq -r ".tag_name")
-        wget -qO "$HOME/blockmesh.tar.gz" "https://github.com/block-mesh/block-mesh-monorepo/releases/download/${blockmesh_version}/blockmesh-cli-x86_64-unknown-linux-gnu.tar.gz"
+
+        # Use specified version or fetch latest version
+        if [ -z "$version" ]; then
+            version=$(wget -qO- https://api.github.com/repos/block-mesh/block-mesh-monorepo/releases/latest | jq -r ".tag_name")
+        fi
+
+        wget -qO "$HOME/blockmesh.tar.gz" "https://github.com/block-mesh/block-mesh-monorepo/releases/download/${version}/blockmesh-cli-x86_64-unknown-linux-gnu.tar.gz"
         
         if [ "$(wc -c < "$HOME/blockmesh.tar.gz")" -ge 1000 ]; then
             tar -xvf "$HOME/blockmesh.tar.gz" -C "$HOME"
@@ -134,7 +149,7 @@ update() {
 
             # Restart the service
             if sudo systemctl restart blockmesh.service; then
-                echo "Blockmesh updated successfully to version ${blockmesh_version}."
+                echo "Blockmesh updated successfully to version ${version}."
             else
                 echo "Failed to restart the blockmesh service."
                 return 1
